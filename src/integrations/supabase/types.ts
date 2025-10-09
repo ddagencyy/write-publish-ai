@@ -14,16 +14,219 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      articles: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          keyword: string
+          meta_description: string | null
+          meta_title: string | null
+          status: string
+          title: string
+          updated_at: string | null
+          user_id: string
+          wordpress_post_id: string | null
+          wordpress_site_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          keyword: string
+          meta_description?: string | null
+          meta_title?: string | null
+          status?: string
+          title: string
+          updated_at?: string | null
+          user_id: string
+          wordpress_post_id?: string | null
+          wordpress_site_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          keyword?: string
+          meta_description?: string | null
+          meta_title?: string | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          wordpress_post_id?: string | null
+          wordpress_site_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "articles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "articles_wordpress_site_id_fkey"
+            columns: ["wordpress_site_id"]
+            isOneToOne: false
+            referencedRelation: "wordpress_sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_subscriptions: {
+        Row: {
+          created_at: string | null
+          credits_remaining: number
+          credits_total: number
+          id: string
+          plan: string
+          stripe_customer_id: string | null
+          stripe_product_id: string | null
+          subscription_end: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          credits_remaining?: number
+          credits_total?: number
+          id?: string
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_product_id?: string | null
+          subscription_end?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          credits_remaining?: number
+          credits_total?: number
+          id?: string
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_product_id?: string | null
+          subscription_end?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wordpress_sites: {
+        Row: {
+          app_password: string
+          created_at: string | null
+          id: string
+          is_connected: boolean | null
+          site_url: string
+          updated_at: string | null
+          user_id: string
+          username: string
+        }
+        Insert: {
+          app_password: string
+          created_at?: string | null
+          id?: string
+          is_connected?: boolean | null
+          site_url: string
+          updated_at?: string | null
+          user_id: string
+          username: string
+        }
+        Update: {
+          app_password?: string
+          created_at?: string | null
+          id?: string
+          is_connected?: boolean | null
+          site_url?: string
+          updated_at?: string | null
+          user_id?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wordpress_sites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "user" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +353,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["user", "admin"],
+    },
   },
 } as const
