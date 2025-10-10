@@ -54,7 +54,8 @@ export default function Keywords() {
   };
 
   const handleGenerateArticle = async (keyword: string) => {
-    if (!subscription || subscription.credits_remaining <= 0) {
+    // Allow generation even if subscription hasn't loaded yet; backend enforces credits
+    if (subscription && subscription.credits_remaining <= 0) {
       toast.error('No credits remaining. Please upgrade your plan.');
       navigate('/billing');
       return;
@@ -159,7 +160,7 @@ export default function Keywords() {
                       <Button
                         size="sm"
                         onClick={() => handleGenerateArticle(kw.keyword)}
-                        disabled={generating === kw.keyword || !subscription || subscription.credits_remaining <= 0}
+                        disabled={generating === kw.keyword || (subscription ? subscription.credits_remaining <= 0 : false)}
                       >
                         {generating === kw.keyword ? (
                           <>
