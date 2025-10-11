@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Search, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
@@ -13,13 +14,15 @@ interface KeywordData {
   keyword: string;
   volume: number;
   difficulty: string;
+  selected?: boolean;
 }
 
 export default function Keywords() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
   const [keywords, setKeywords] = useState<KeywordData[]>([]);
-  const [generating, setGenerating] = useState<string | null>(null);
+  const [selectedKeywords, setSelectedKeywords] = useState<Set<string>>(new Set());
+  const [generating, setGenerating] = useState(false);
   const navigate = useNavigate();
   const { subscription, refreshSubscription } = useAuth();
 
@@ -53,30 +56,52 @@ export default function Keywords() {
     }
   };
 
-  const handleGenerateArticle = async (keyword: string) => {
-    // Allow generation even if subscription hasn't loaded yet; backend enforces credits
+  const toggleKeywordSelection = (keyword: string) => {
+    setSelectedKeywords(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(keyword)) {
+        newSet.delete(keyword);
+      } else {
+        if (newSet.size >= 5) {
+          toast.error('Maximum 5 keywords allowed per article');
+          return prev;
+        }
+        newSet.add(keyword);
+      }
+      return newSet;
+    });
+  };
+
+  const handleGenerateArticle = async () => {
+    if (selectedKeywords.size === 0) {
+      toast.error('Please select at least one keyword');
+      return;
+    }
+
     if (subscription && subscription.credits_remaining <= 0) {
       toast.error('No credits remaining. Please upgrade your plan.');
       navigate('/billing');
       return;
     }
 
-    setGenerating(keyword);
+    setGenerating(true);
     try {
+      const keywordsArray = Array.from(selectedKeywords);
       const { data, error } = await supabase.functions.invoke('generate-article', {
-        body: { keyword }
+        body: { keywords: keywordsArray }
       });
 
       if (error) throw error;
 
-      toast.success('Article generated successfully!');
+      toast.success(`Article generated successfully with ${keywordsArray.length} keyword${keywordsArray.length > 1 ? 's' : ''}!`);
       await refreshSubscription();
+      setSelectedKeywords(new Set());
       navigate('/articles');
     } catch (error: any) {
       console.error('Error generating article:', error);
       toast.error(error.message || 'Failed to generate article');
     } finally {
-      setGenerating(null);
+      setGenerating(false);
     }
   };
 
@@ -127,53 +152,62 @@ export default function Keywords() {
       {keywords.length > 0 && (
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Search Results</CardTitle>
+            <CardTitle>Search Results ({keywords.length} keywords)</CardTitle>
             <CardDescription>
-              Click "Generate" to create an AI-powered article for any keyword
+              Select up to 5 keywords to generate a comprehensive SEO article
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 flex justify-between items-center">
+              <div className="text-sm text-muted-foreground">
+                {selectedKeywords.size} keyword{selectedKeywords.size !== 1 ? 's' : ''} selected (max 5)
+              </div>
+              <Button
+                onClick={handleGenerateArticle}
+                disabled={generating || selectedKeywords.size === 0 || (subscription ? subscription.credits_remaining <= 0 : false)}
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating Article...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Generate Article
+                  </>
+                )}
+              </Button>
+            </div>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">Select</TableHead>
                   <TableHead>Keyword</TableHead>
                   <TableHead>Volume</TableHead>
                   <TableHead>Difficulty</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {keywords.map((kw, index) => (
-                  <TableRow key={index}>
+                  <TableRow key={index} className={selectedKeywords.has(kw.keyword) ? 'bg-accent/50' : ''}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedKeywords.has(kw.keyword)}
+                        onCheckedChange={() => toggleKeywordSelection(kw.keyword)}
+                        disabled={!selectedKeywords.has(kw.keyword) && selectedKeywords.size >= 5}
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">{kw.keyword}</TableCell>
                     <TableCell>{kw.volume.toLocaleString()}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs ${
-                        kw.difficulty === 'easy' ? 'bg-green-100 text-green-800' :
-                        kw.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
+                        kw.difficulty === 'easy' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' :
+                        kw.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' :
+                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
                       }`}>
                         {kw.difficulty}
                       </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        onClick={() => handleGenerateArticle(kw.keyword)}
-                        disabled={generating === kw.keyword || (subscription ? subscription.credits_remaining <= 0 : false)}
-                      >
-                        {generating === kw.keyword ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Generating...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            Generate
-                          </>
-                        )}
-                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

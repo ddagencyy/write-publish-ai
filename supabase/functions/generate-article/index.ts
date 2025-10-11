@@ -25,8 +25,9 @@ serve(async (req) => {
     }
 
     const userId = userData.user.id;
-    const { keyword } = await req.json();
-    console.log('Generating article for keyword:', keyword);
+    const { keywords: keywordsArray } = await req.json();
+    const keywords = Array.isArray(keywordsArray) ? keywordsArray : [keywordsArray];
+    console.log('Generating article for keywords:', keywords);
 
     // Check credits
     const { data: subscription, error: subError } = await supabase
@@ -50,18 +51,57 @@ serve(async (req) => {
     // Call Lovable AI Gateway for article generation
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
     
-    const systemPrompt = `You are an expert SEO content writer. Generate a comprehensive, SEO-optimized blog article of 1200-1500 words. 
+    const mainKeyword = keywords[0];
+    const secondaryKeywords = keywords.slice(1, 4);
     
-    Requirements:
-    - Create an engaging meta title (60 characters max)
-    - Write a compelling meta description (160 characters max)
-    - Structure with H2 and H3 headings
-    - Include an introduction and conclusion
-    - Use natural, engaging language
-    - Optimize for the target keyword naturally
-    - Return the content in clean HTML format`;
+    const systemPrompt = `You are an expert SEO content writer specializing in creating high-ranking, comprehensive blog articles.
 
-    const userPrompt = `Write a complete SEO-optimized article about: "${keyword}"`;
+CRITICAL SEO REQUIREMENTS:
+1. STRUCTURE - Must include:
+   - Compelling H1 title with main keyword
+   - 6-8 H2 sections (main topics)
+   - 2-3 H3 subsections under each H2
+   - Introduction paragraph (150-200 words)
+   - Conclusion paragraph (100-150 words)
+   
+2. LENGTH: 1800-2500 words minimum
+
+3. KEYWORD OPTIMIZATION:
+   - Main keyword in H1, first paragraph, and naturally throughout (1-2% density)
+   - Secondary keywords integrated naturally
+   - Use semantic variations and LSI keywords
+   
+4. CONTENT QUALITY:
+   - Write in conversational, engaging tone
+   - Include actionable tips and specific examples
+   - Add statistics or data points when relevant
+   - Use bullet points and numbered lists for readability
+   - Short paragraphs (2-4 sentences max)
+   
+5. SEO ELEMENTS:
+   - Meta title: 50-60 characters, include main keyword
+   - Meta description: 150-160 characters, compelling with CTA
+   - Internal linking suggestions (mention related topics)
+   
+6. FORMAT: Return as clean HTML with semantic tags:
+   - <h1> for title
+   - <h2> for main sections
+   - <h3> for subsections
+   - <p> for paragraphs
+   - <ul>/<ol> for lists
+   - <strong> for emphasis
+   
+START with these exact lines:
+Meta Title: [your meta title]
+Meta Description: [your meta description]
+
+Then provide the full HTML article.`;
+
+    const userPrompt = `Write a comprehensive, SEO-optimized article about: "${mainKeyword}"
+    
+${secondaryKeywords.length > 0 ? `Also naturally incorporate these related keywords: ${secondaryKeywords.join(', ')}` : ''}
+
+Make it informative, actionable, and optimized to rank on Google's first page.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -97,9 +137,9 @@ serve(async (req) => {
     const titleMatch = generatedContent.match(/<h1[^>]*>(.+?)<\/h1>/i) || 
                       generatedContent.match(/Title:?\s*(.+?)(?:\n|$)/i);
     
-    const metaTitle = metaTitleMatch ? metaTitleMatch[1].trim() : `${keyword} - Complete Guide`;
-    const metaDescription = metaDescMatch ? metaDescMatch[1].trim() : `Learn everything about ${keyword} in this comprehensive guide.`;
-    const title = titleMatch ? titleMatch[1].replace(/<[^>]*>/g, '').trim() : `The Complete Guide to ${keyword}`;
+    const metaTitle = metaTitleMatch ? metaTitleMatch[1].trim() : `${mainKeyword} - Complete Guide`;
+    const metaDescription = metaDescMatch ? metaDescMatch[1].trim() : `Learn everything about ${mainKeyword} in this comprehensive guide.`;
+    const title = titleMatch ? titleMatch[1].replace(/<[^>]*>/g, '').trim() : `The Complete Guide to ${mainKeyword}`;
 
     // Clean content (remove meta tags from content)
     let cleanContent = generatedContent
@@ -118,7 +158,7 @@ serve(async (req) => {
       .from('articles')
       .insert({
         user_id: userId,
-        keyword,
+        keyword: mainKeyword,
         title,
         meta_title: metaTitle,
         meta_description: metaDescription,
@@ -130,7 +170,7 @@ serve(async (req) => {
 
     if (insertError) throw insertError;
 
-    // Deduct credit
+    // Deduct credit (1 credit per article, regardless of keyword count)
     await supabase
       .from('user_subscriptions')
       .update({ credits_remaining: subscription.credits_remaining - 1 })
