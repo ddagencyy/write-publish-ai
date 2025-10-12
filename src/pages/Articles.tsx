@@ -19,11 +19,20 @@ interface Article {
   created_at: string;
 }
 
+interface ArticleSection {
+  type: 'h1' | 'h2' | 'h3' | 'p' | 'ul' | 'ol' | 'strong';
+  content: string;
+  imageUrl?: string;
+  imageAlt?: string;
+}
+
 export default function Articles() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState<string | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [parsedSections, setParsedSections] = useState<ArticleSection[]>([]);
+  const [loadingImages, setLoadingImages] = useState(false);
 
   useEffect(() => {
     fetchArticles();
@@ -44,6 +53,64 @@ export default function Articles() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const parseArticleContent = (htmlContent: string): ArticleSection[] => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    const sections: ArticleSection[] = [];
+
+    const elements = doc.body.children;
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i];
+      const tagName = element.tagName.toLowerCase() as 'h1' | 'h2' | 'h3' | 'p' | 'ul' | 'ol' | 'strong';
+      
+      if (['h1', 'h2', 'h3', 'p', 'ul', 'ol', 'strong'].includes(tagName)) {
+        sections.push({
+          type: tagName,
+          content: element.textContent || '',
+        });
+      }
+    }
+
+    return sections;
+  };
+
+  const fetchImageForSection = async (section: ArticleSection): Promise<string | null> => {
+    try {
+      const query = section.content.substring(0, 100);
+      const { data, error } = await supabase.functions.invoke('fetch-unsplash-image', {
+        body: { query }
+      });
+
+      if (error) throw error;
+      return data?.url || null;
+    } catch (error) {
+      console.error('Error fetching image:', error);
+      return null;
+    }
+  };
+
+  const handleViewArticle = async (article: Article) => {
+    setSelectedArticle(article);
+    setLoadingImages(true);
+    
+    const sections = parseArticleContent(article.content);
+    setParsedSections(sections);
+
+    // Fetch images for h2 sections
+    const sectionsWithImages = await Promise.all(
+      sections.map(async (section, index) => {
+        if (section.type === 'h2' && index > 0) {
+          const imageUrl = await fetchImageForSection(section);
+          return { ...section, imageUrl: imageUrl || undefined };
+        }
+        return section;
+      })
+    );
+
+    setParsedSections(sectionsWithImages);
+    setLoadingImages(false);
   };
 
   const handlePublish = async (articleId: string) => {
@@ -136,7 +203,7 @@ export default function Articles() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setSelectedArticle(article)}
+                          onClick={() => handleViewArticle(article)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -199,7 +266,7 @@ export default function Articles() {
               )}
             </div>
 
-            {/* Article Content with SEO Styling */}
+            {/* Article Content with Images */}
             <div className="border-t pt-4">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-semibold text-sm uppercase tracking-wide text-primary">Article Content</h4>
@@ -215,19 +282,57 @@ export default function Articles() {
                 </Button>
               </div>
               
-              <div 
-                className="prose prose-slate dark:prose-invert max-w-none
-                  prose-headings:font-bold prose-headings:tracking-tight
-                  prose-h1:text-3xl prose-h1:mb-4 prose-h1:text-primary
-                  prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:text-primary
-                  prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
-                  prose-p:text-base prose-p:leading-7 prose-p:mb-4
-                  prose-li:my-2 prose-li:text-base
-                  prose-ul:my-4 prose-ol:my-4
-                  prose-strong:text-primary prose-strong:font-semibold
-                  prose-a:text-primary prose-a:underline"
-                dangerouslySetInnerHTML={{ __html: selectedArticle?.content || '' }}
-              />
+              {loadingImages && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="ml-2 text-sm text-muted-foreground">Loading images...</span>
+                </div>
+              )}
+              
+              <div className="space-y-4">
+                {parsedSections.map((section, index) => (
+                  <div key={index}>
+                    {section.type === 'h1' && (
+                      <h1 className="text-3xl font-bold mb-4 text-primary">{section.content}</h1>
+                    )}
+                    {section.type === 'h2' && (
+                      <>
+                        {section.imageUrl && (
+                          <img 
+                            src={section.imageUrl} 
+                            alt={section.content}
+                            className="w-full h-64 object-cover rounded-lg mb-4 mt-6"
+                          />
+                        )}
+                        <h2 className="text-2xl font-bold mt-8 mb-4 text-primary">{section.content}</h2>
+                      </>
+                    )}
+                    {section.type === 'h3' && (
+                      <h3 className="text-xl font-bold mt-6 mb-3">{section.content}</h3>
+                    )}
+                    {section.type === 'p' && (
+                      <p className="text-base leading-7 mb-4">{section.content}</p>
+                    )}
+                    {section.type === 'strong' && (
+                      <strong className="text-primary font-semibold">{section.content}</strong>
+                    )}
+                    {section.type === 'ul' && (
+                      <ul className="list-disc list-inside my-4 space-y-2">
+                        {section.content.split('\n').filter(line => line.trim()).map((item, i) => (
+                          <li key={i} className="text-base">{item.trim()}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {section.type === 'ol' && (
+                      <ol className="list-decimal list-inside my-4 space-y-2">
+                        {section.content.split('\n').filter(line => line.trim()).map((item, i) => (
+                          <li key={i} className="text-base">{item.trim()}</li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </DialogContent>

@@ -1,1 +1,4 @@
 project_id = "wibtvjlkudrwsyphydlh"
+
+[functions.fetch-unsplash-image]
+verify_jwt = false
