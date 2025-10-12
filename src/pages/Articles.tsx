@@ -170,31 +170,64 @@ export default function Articles() {
       )}
 
       <Dialog open={!!selectedArticle} onOpenChange={() => setSelectedArticle(null)}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{selectedArticle?.title}</DialogTitle>
-            <DialogDescription>
-              Keyword: {selectedArticle?.keyword}
+            <DialogTitle className="text-2xl pr-8">{selectedArticle?.title}</DialogTitle>
+            <DialogDescription className="flex items-center gap-4 mt-2">
+              <span>Keyword: <strong>{selectedArticle?.keyword}</strong></span>
+              <Badge variant={selectedArticle?.status === 'published' ? 'default' : 'secondary'}>
+                {selectedArticle?.status}
+              </Badge>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            {selectedArticle?.meta_title && (
-              <div>
-                <h4 className="font-semibold text-sm text-muted-foreground mb-1">Meta Title</h4>
-                <p className="text-sm">{selectedArticle.meta_title}</p>
+          
+          <div className="space-y-6 mt-4">
+            {/* SEO Meta Information */}
+            <div className="bg-accent/10 rounded-lg p-4 space-y-3">
+              <h4 className="font-semibold text-sm uppercase tracking-wide text-primary">SEO Meta Information</h4>
+              {selectedArticle?.meta_title && (
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">Meta Title ({selectedArticle.meta_title.length} chars)</span>
+                  <p className="text-sm font-medium mt-1">{selectedArticle.meta_title}</p>
+                </div>
+              )}
+              {selectedArticle?.meta_description && (
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">Meta Description ({selectedArticle.meta_description.length} chars)</span>
+                  <p className="text-sm mt-1">{selectedArticle.meta_description}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Article Content with SEO Styling */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold text-sm uppercase tracking-wide text-primary">Article Content</h4>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedArticle?.content || '');
+                    toast.success('Content copied to clipboard!');
+                  }}
+                >
+                  Copy HTML
+                </Button>
               </div>
-            )}
-            {selectedArticle?.meta_description && (
-              <div>
-                <h4 className="font-semibold text-sm text-muted-foreground mb-1">Meta Description</h4>
-                <p className="text-sm">{selectedArticle.meta_description}</p>
-              </div>
-            )}
-            <div>
-              <h4 className="font-semibold text-sm text-muted-foreground mb-1">Content</h4>
-              <div className="prose prose-sm max-w-none">
-                <div dangerouslySetInnerHTML={{ __html: selectedArticle?.content || '' }} />
-              </div>
+              
+              <div 
+                className="prose prose-slate dark:prose-invert max-w-none
+                  prose-headings:font-bold prose-headings:tracking-tight
+                  prose-h1:text-3xl prose-h1:mb-4 prose-h1:text-primary
+                  prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:text-primary
+                  prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
+                  prose-p:text-base prose-p:leading-7 prose-p:mb-4
+                  prose-li:my-2 prose-li:text-base
+                  prose-ul:my-4 prose-ol:my-4
+                  prose-strong:text-primary prose-strong:font-semibold
+                  prose-a:text-primary prose-a:underline"
+                dangerouslySetInnerHTML={{ __html: selectedArticle?.content || '' }}
+              />
             </div>
           </div>
         </DialogContent>
