@@ -48,8 +48,8 @@ serve(async (req) => {
       );
     }
 
-    // Call Lovable AI Gateway for article generation
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
+    // Call Gemini API directly for article generation
+    const geminiApiKey = Deno.env.get("GEMINI_API_KEY")!;
     
     const mainKeyword = keywords[0];
     const secondaryKeywords = keywords.slice(1, 4);
@@ -136,33 +136,32 @@ ${secondaryKeywords.length > 0 ? `Also naturally incorporate these related keywo
 
 Make it informative, actionable, and optimized to rank on Google's first page.`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${lovableApiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
+        contents: [{
+          parts: [{
+            text: `${systemPrompt}\n\n${userPrompt}`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 8192,
+        }
       }),
     });
 
     if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        throw new Error("Rate limit exceeded. Please try again later.");
-      }
-      if (aiResponse.status === 402) {
-        throw new Error("AI credits depleted. Please add credits to your workspace.");
-      }
+      const errorData = await aiResponse.text();
+      console.error("Gemini API error:", errorData);
       throw new Error("AI generation failed");
     }
 
     const aiData = await aiResponse.json();
-    const generatedContent = aiData.choices[0].message.content;
+    const generatedContent = aiData.candidates[0].content.parts[0].text;
 
     // Parse the generated content to extract meta info
     const metaTitleMatch = generatedContent.match(/Meta Title:?\s*(.+?)(?:\n|$)/i);
