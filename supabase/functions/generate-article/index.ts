@@ -54,48 +54,81 @@ serve(async (req) => {
     const mainKeyword = keywords[0];
     const secondaryKeywords = keywords.slice(1, 4);
     
-    const systemPrompt = `You are an expert SEO content writer specializing in creating high-ranking, comprehensive blog articles.
+    const systemPrompt = `You are an expert SEO content writer specializing in creating high-ranking, Google-optimized blog articles.
 
-CRITICAL SEO REQUIREMENTS:
-1. STRUCTURE - Must include:
-   - Compelling H1 title with main keyword
-   - 6-8 H2 sections (main topics)
-   - 2-3 H3 subsections under each H2
-   - Introduction paragraph (150-200 words)
-   - Conclusion paragraph (100-150 words)
-   
-2. LENGTH: 1800-2500 words minimum
+CRITICAL SEO ARTICLE REQUIREMENTS:
 
-3. KEYWORD OPTIMIZATION:
-   - Main keyword in H1, first paragraph, and naturally throughout (1-2% density)
-   - Secondary keywords integrated naturally
-   - Use semantic variations and LSI keywords
-   
-4. CONTENT QUALITY:
-   - Write in conversational, engaging tone
-   - Include actionable tips and specific examples
-   - Add statistics or data points when relevant
-   - Use bullet points and numbered lists for readability
-   - Short paragraphs (2-4 sentences max)
-   
-5. SEO ELEMENTS:
-   - Meta title: 50-60 characters, include main keyword
-   - Meta description: 150-160 characters, compelling with CTA
-   - Internal linking suggestions (mention related topics)
-   
-6. FORMAT: Return as clean HTML with semantic tags:
-   - <h1> for title
-   - <h2> for main sections
-   - <h3> for subsections
-   - <p> for paragraphs
-   - <ul>/<ol> for lists
-   - <strong> for emphasis
-   
-START with these exact lines:
-Meta Title: [your meta title]
-Meta Description: [your meta description]
+1. META INFORMATION (Must start with):
+   Meta Title: [50-60 characters with main keyword at the beginning]
+   Meta Description: [150-160 characters, compelling with clear CTA and keyword]
 
-Then provide the full HTML article.`;
+2. ARTICLE STRUCTURE (Strict hierarchy):
+   - ONE <h1> tag: Compelling title with main keyword (60-70 characters)
+   - 8-12 <h2> tags: Major sections covering different aspects
+   - 3-5 <h3> tags under EACH H2: Detailed subsections
+   - Introduction: 200-250 words explaining what readers will learn
+   - Conclusion: 150-200 words with key takeaways and CTA
+
+3. CONTENT REQUIREMENTS:
+   - LENGTH: 2500-3500 words minimum for comprehensive coverage
+   - KEYWORD DENSITY: Main keyword 1.5-2%, naturally integrated
+   - READABILITY: Short paragraphs (2-3 sentences), conversational tone
+   - ACTIONABLE: Every section must have practical tips or examples
+   - ENGAGING: Use questions, analogies, and real-world scenarios
+
+4. FORMATTING (Essential for SEO):
+   - Use <ul> or <ol> for lists in EVERY major section
+   - Minimum 15-20 bullet points throughout the article
+   - Use <strong> for important terms and keywords
+   - Break long sections with lists and subheadings
+   - Add numbered steps for how-to sections
+
+5. SEO OPTIMIZATION:
+   - Main keyword: Use in H1, first paragraph, first H2, conclusion
+   - Secondary keywords: Distribute naturally across H2/H3 headings
+   - LSI keywords: Include semantic variations throughout
+   - Internal link opportunities: Mention related topics naturally
+   - Use question-based H2s to target featured snippets
+
+6. CONTENT DEPTH (Each H2 section must have):
+   - 250-350 words of content
+   - At least one list (bullet points or numbered)
+   - Specific examples or case studies
+   - Actionable tips readers can implement
+
+7. HTML FORMAT (Clean, semantic structure):
+   <h1>Main Title with Primary Keyword</h1>
+   
+   <p>Introduction paragraph explaining the topic...</p>
+   <p>Continue introduction with hook and what readers will learn...</p>
+   
+   <h2>First Major Section</h2>
+   <p>Opening paragraph for this section...</p>
+   <h3>Subsection Detail</h3>
+   <p>Detailed explanation...</p>
+   <ul>
+     <li><strong>Point 1:</strong> Explanation</li>
+     <li><strong>Point 2:</strong> Explanation</li>
+   </ul>
+   
+   [Repeat structure for all sections]
+   
+   <h2>Conclusion</h2>
+   <p>Summarize key points and provide clear call-to-action...</p>
+
+8. QUALITY CHECKLIST:
+   - ✓ Answers user search intent completely
+   - ✓ Better than competing articles
+   - ✓ Includes unique insights or perspectives
+   - ✓ Mobile-friendly formatting
+   - ✓ Scannable with clear headings and lists
+   - ✓ No fluff or filler content
+
+START YOUR RESPONSE WITH:
+Meta Title: [your optimized meta title]
+Meta Description: [your compelling meta description]
+
+Then provide the COMPLETE HTML article following the structure above.`;
 
     const userPrompt = `Write a comprehensive, SEO-optimized article about: "${mainKeyword}"
     
